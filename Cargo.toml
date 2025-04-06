@@ -3,6 +3,10 @@ name = "stockalerts"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "stockalerts"
+path = "src/main.rs"
+
 [dependencies]
 lambda_runtime = "0.8" 
 tokio = { version = "1.1", features = ["full"] }

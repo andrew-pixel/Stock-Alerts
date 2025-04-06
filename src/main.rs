@@ -9,9 +9,9 @@ use lambda_runtime::{Error, service_fn, LambdaEvent, Context};
 
 
 #[derive(Serialize , Debug, Deserialize)]
-struct StockPrice {
-    name: String,
-    lastprice: f64,
+pub struct StockPrice {
+    pub name: String,
+    pub lastprice: f64,
 }
 
 #[derive(Serialize)]
@@ -58,7 +58,7 @@ async fn function_handler(event: LambdaEvent<Value>) -> Result<(), Box<dyn std::
                 if price_diff > 0.04 {
                     let positive_negative = if quote.close < stock.lastprice { -1 } else { 1 };
                     updateDatabase(&supabase_url, &supabase_key, quote.close, &stock.name).await?;
-                    send_pushbullet_notification(&stock.name, positive_negative, quote.close, price_diff ).await?;
+                    send_pushbullet_notification(&stock.name, positive_negative, quote.close, price_diff*100.0 ).await?;
                     
                 }
                 else if event_type == "close" {
@@ -144,4 +144,103 @@ pub async fn send_pushbullet_notification(title: &str, positive: i32, price: f64
     }
 
     Ok(())
+}
+#[cfg(test)]
+pub mod test {
+    pub use super::*;
+}
+pub mod handlers {
+    pub use super::send_pushbullet_notification;
+    pub use super::testable_function_handler;
+}
+pub async fn testable_function_handler(event: LambdaEvent<Value>, test_stocks: Option<Vec<StockPrice>>)
+ -> Result<TestResults, Box<dyn std::error::Error>> { // separate clone function handler to not break aws lambda
+    
+    
+    dotenv().ok();
+    
+    let mut stocks_result = if let Some(test_stocks) = test_stocks {
+        test_stocks
+    } else {
+        let supabase_url = env::var("URL").expect("Missing SUPABASE URL in .env");
+        let supabase_key = env::var("APIKEY").expect("Missing SUPABASE KEY in .env");
+
+        let client = Client::new();
+        let response = client
+            .get(format!("{}/rest/v1/stocks", supabase_url))
+            .header("apikey", &supabase_key)
+            .header("Authorization", format!("Bearer {}", supabase_key))
+            .header("Content-Type", "application/json")
+            .send()
+            .await?;
+        
+        let response_text = response.text().await?;
+        serde_json::from_str(&response_text)?
+    };
+    
+    let provider = yahoo::YahooConnector::new()?;
+
+    let event_type = event.payload.get("event_type").and_then(|v| v.as_str()).unwrap_or("");
+    let mut results = TestResults {
+        stocks: Vec::new(),
+    };
+    for stock in &stocks_result {
+        println!("Stock: {}, Price: {}", stock.name, stock.lastprice);
+        if stock.name == "TEST1"{
+            let price_diff = ((100.0 - stock.lastprice) / stock.lastprice).abs();
+                let mut action = "none";
+                if price_diff > 0.04 {
+                    action = "significant price %";
+                }
+                else if event_type == "close" {
+                    action = "close"
+                }
+                results.stocks.push(StockR{
+                    name: stock.name.clone(),
+                    previousPrice: stock.lastprice,
+                    currentPrice: 100.0,
+                    percent: price_diff*100.0,
+                    action: action.to_string(),
+                });
+        }
+        else if let Ok(response) = provider.get_latest_quotes(&stock.name, "1d").await {
+            if let Ok(quote) = response.last_quote() {
+                let price_diff = ((quote.close - stock.lastprice) / stock.lastprice).abs();
+                let mut action = "none";
+                if price_diff > 0.04 {
+                    let positive_negative = if quote.close < stock.lastprice { -1 } else { 1 };
+                    //updateDatabase(&supabase_url, &supabase_key, quote.close, &stock.name).await?;
+                    action = "significant price %";
+                }
+                else if event_type == "close" {
+                    //updateDatabase(&supabase_url, &supabase_key, quote.close, &stock.name).await?;
+                    action = "close"
+                }
+                results.stocks.push(StockR{
+                    name: stock.name.clone(),
+                    previousPrice: stock.lastprice,
+                    currentPrice: quote.close,
+                    percent: price_diff*100.0,
+                    action: action.to_string(),
+                });
+
+            }
+        }
+    }
+    
+
+    Ok(results)
+}
+
+#[derive(Debug)]
+pub struct TestResults {
+    pub stocks: Vec<StockR>,
+}
+#[derive(Debug)]
+pub struct StockR{
+    pub name: String,
+    pub previousPrice: f64,
+    pub currentPrice: f64,
+    pub percent:f64,
+    pub action: String, 
 }
