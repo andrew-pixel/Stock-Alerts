@@ -1,4 +1,4 @@
-use stockalerts::handlers::{send_pushbullet_notification, testable_function_handler};
+use stockalerts::handlers::{send_pushbullet_notification, testable_function_handler, function_handler};
 use stockalerts::{StockPrice, TestResults};
 
 use lambda_runtime::{Context, LambdaEvent};
@@ -13,7 +13,16 @@ mod tests {
         let result = send_pushbullet_notification("test", 1, 32.24, 10.0).await;
         assert!(result.is_ok());
     }
-
+    #[tokio::test]
+    async fn fulltest() {
+        let event = LambdaEvent::new(
+            json!({"event_type": ""}),
+            Context::default()
+        );
+        let results = function_handler(event).await;
+        
+        assert!(results.is_ok());
+    }
     #[tokio::test]
     async fn test_close_event() {
         let event = LambdaEvent::new(

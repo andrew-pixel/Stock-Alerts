@@ -20,7 +20,7 @@ struct Response {
     msg: String,
 }
 
-async fn function_handler(event: LambdaEvent<Value>) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn function_handler(event: LambdaEvent<Value>) -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
     
     let supabase_url = env::var("URL").expect("Missing SUPABASE URL in .env");
@@ -152,6 +152,7 @@ pub mod test {
 pub mod handlers {
     pub use super::send_pushbullet_notification;
     pub use super::testable_function_handler;
+    pub use super::function_handler;
 }
 pub async fn testable_function_handler(event: LambdaEvent<Value>, test_stocks: Option<Vec<StockPrice>>)
  -> Result<TestResults, Box<dyn std::error::Error>> { // separate clone function handler to not break aws lambda
