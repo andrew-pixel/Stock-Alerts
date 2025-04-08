@@ -1,3 +1,4 @@
+#![allow(soft_unstable)]
 use dotenvy::dotenv;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -6,6 +7,8 @@ use std::env;
 
 use lambda_runtime::{service_fn, Context, Error, LambdaEvent};
 use yahoo_finance_api as yahoo;
+
+
 
 #[derive(Serialize, Debug, Deserialize)]
 pub struct StockPrice {
