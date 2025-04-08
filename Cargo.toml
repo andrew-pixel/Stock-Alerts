@@ -18,3 +18,4 @@ yahoo-finance = "0.3"
 futures = "0.3"
 yahoo_finance_api = "3.0.0"
 tokio-test = "0.4.4"
+openssl = { version = "0.10.35", features = ["vendored"] }
