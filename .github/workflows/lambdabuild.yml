@@ -36,7 +36,7 @@ jobs:
       - name: Release lambda
         run: |
           pip install cargo-lambda
-          OPENSSL_DIR=/usr cargo lambda build --release
+          OPENSSL_DIR=/usr cargo +nightly lambda build --release
 
       - name: Deploy to AWS Lambda
         run: |
