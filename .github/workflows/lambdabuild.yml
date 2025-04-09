@@ -38,7 +38,7 @@ jobs:
           pip install cargo-lambda
           OPENSSL_DIR=/usr cargo lambda build --release
           ls -R target/lambda/
-          cargo lambda deploy --binary-path target/lambda/stockalerts/bootstrap --iam-role arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/stockRole
+          cargo lambda deploy --binary-path target/lambda/stockalerts/bootstrap --function-name stockalerts --iam-role arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/stockRole
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
