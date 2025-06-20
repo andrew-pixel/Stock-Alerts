@@ -111,7 +111,7 @@ pub async fn function_handler(event: LambdaEvent<Value>) -> Result<(), Box<dyn s
 
                 if alr.direction == 1{
                     if quote.close > alr.targetprice{
-                        println("alert triggered");
+                        println!("alert triggered");
                         send_alert(&alr.name, alr.targetprice, quote.close).await?;
                         clear_alert(&supabase_url, &supabase_key, &alr.name, alr.targetprice).await?;
                     }
