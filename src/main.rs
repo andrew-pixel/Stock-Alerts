@@ -16,6 +16,12 @@ pub struct StockPrice {
     pub lastprice: f64,
 }
 
+#[derive(Serialize, Debug, Deserialize)]
+pub struct Alert {
+    pub name: String,
+    pub targetprice: f64,
+}
+
 #[derive(Serialize)]
 struct Response {
     req_id: String,
@@ -47,6 +53,22 @@ pub async fn function_handler(event: LambdaEvent<Value>) -> Result<(), Box<dyn s
         }
     };
 
+    let alertsresponse = client
+        .get(format!("{}/rest/v1/alerts", supabase_url))
+        .header("apikey", &supabase_key)
+        .header("Authorization", format!("Bearer {}", supabase_key))
+        .header("Content-Type", "application/json")
+        .send()
+        .await?;
+
+    let response_text = alertsresponse.text().await?;
+    let alerts: Vec<Alert> = match serde_json::from_str(&response_text) {
+        Ok(data) => data,
+        Err(e) => {
+            eprintln!("Failed to parse JSON: {}", e);
+            Vec::new()
+        }
+    };
     let provider = yahoo::YahooConnector::new()?;
 
     let event_type = event
@@ -76,6 +98,16 @@ pub async fn function_handler(event: LambdaEvent<Value>) -> Result<(), Box<dyn s
             }
         }
     }
+    for alr in &alerts {
+        if let Ok(response) = provider.get_latest_quotes(&alr.name, "1d").await {
+            if let Ok(quote) = response.last_quote(){
+                if quote.close > alr.targetprice{
+                    send_alert(&alr.name, alr.targetprice, quote.close).await?;
+                    clear_alert(&supabase_url, &supabase_key, &alr.name, alr.targetprice).await?;
+                }
+            }
+        }
+    } 
 
     Ok(())
 }
@@ -94,7 +126,33 @@ async fn main() -> Result<(), Error> {
 
     Ok(())
 }
+async fn clear_alert(
+    url: &str,
+    key: &str,
+    name: &str,
+    target: f64
+) -> Result<(), Box<dyn std::error::Error>> {
+    let client = Client::new();
+    let target_enc = encode(&target.to_string());
+    let update = format!("{}/rest/v1/stocks?name=eq.{}&targetprice=eq.{}", url, name, target_enc);
+    let response = client
+        .delete(&update)
+        .header("apikey", key)
+        .header("Authorization", format!("Bearer {}", key))
+        .send()
+        .await?;
 
+    if response.status().is_success() {
+        println!("Deleted {} ", name);
+    } else {
+        println!(
+            "Failed to delete {}: {:?}",
+            name,
+            response.text().await?
+        );
+    }
+    Ok(())
+}
 async fn updateDatabase(
     url: &str,
     key: &str,
@@ -126,6 +184,37 @@ async fn updateDatabase(
             response.text().await?
         );
     }
+    Ok(())
+}
+pub async fn send_alert(name: &str, targetprice: f64, quote: f64) -> Result<(), Box<dyn std::error::Error>>{
+    let client = Client::new();
+    let access_token = env::var("PUSHAPIKEY").expect("Missing PUSHAPIKEY in .env");
+
+    let title = format!(" {} Hit target price ${:.2}", name, targetprice)
+    
+    let body = format!("Current Price: ${:.2}", quote);
+
+    let payload = json!({
+        "type": "note",
+        "title": title,
+        "body": body
+    });
+
+    let PUSHBULLET_API_URL = "https://api.pushbullet.com/v2/pushes";
+    let response = client
+        .post(PUSHBULLET_API_URL)
+        .header("Access-Token", access_token)
+        .header("Content-Type", "application/json")
+        .json(&payload)
+        .send()
+        .await?;
+
+    if response.status().is_success() {
+        println!("Notification sent successfully!");
+    } else {
+        println!("Failed to send notification: {:?}", response.text().await?);
+    }
+
     Ok(())
 }
 pub async fn send_pushbullet_notification(
