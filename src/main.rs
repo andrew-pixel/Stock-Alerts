@@ -99,11 +99,19 @@ pub async fn function_handler(event: LambdaEvent<Value>) -> Result<(), Box<dyn s
             }
         }
     }
+    println!("Total alerts: {}", alerts.len());
     for alr in &alerts {
         if let Ok(response) = provider.get_latest_quotes(&alr.name, "1d").await {
             if let Ok(quote) = response.last_quote(){
+
+                println!(
+                        "Latest quote for {} - Close: {}, Target: {}, Direction: {}",
+                        alr.name, quote.close, alr.targetprice, alr.direction
+                    );
+
                 if alr.direction == 1{
                     if quote.close > alr.targetprice{
+                        println("alert triggered");
                         send_alert(&alr.name, alr.targetprice, quote.close).await?;
                         clear_alert(&supabase_url, &supabase_key, &alr.name, alr.targetprice).await?;
                     }
@@ -130,7 +138,7 @@ async fn main() -> Result<(), Error> {
     //let event = serde_json::json!({ "test": "data" }); // Simulated event payload
     //let ctx = lambda_runtime::Context::default(); // Dummy context
 
-    // let result = function_handler(event, ctx).await?;
+    //let result = function_handler(event, ctx).await?;
     //println!("Function Result: {}", result);
 
     Ok(())
