@@ -20,6 +20,7 @@ pub struct StockPrice {
 pub struct Alert {
     pub name: String,
     pub targetprice: f64,
+    pub direction: i8
 }
 
 #[derive(Serialize)]
@@ -101,9 +102,17 @@ pub async fn function_handler(event: LambdaEvent<Value>) -> Result<(), Box<dyn s
     for alr in &alerts {
         if let Ok(response) = provider.get_latest_quotes(&alr.name, "1d").await {
             if let Ok(quote) = response.last_quote(){
-                if quote.close > alr.targetprice{
-                    send_alert(&alr.name, alr.targetprice, quote.close).await?;
-                    clear_alert(&supabase_url, &supabase_key, &alr.name, alr.targetprice).await?;
+                if alr.direction == 1{
+                    if quote.close > alr.targetprice{
+                        send_alert(&alr.name, alr.targetprice, quote.close).await?;
+                        clear_alert(&supabase_url, &supabase_key, &alr.name, alr.targetprice).await?;
+                    }
+                }
+                else{
+                    if quote.close < alr.targetprice{
+                        send_alert(&alr.name, alr.targetprice, quote.close).await?;
+                        clear_alert(&supabase_url, &supabase_key, &alr.name, alr.targetprice).await?;
+                    }
                 }
             }
         }
@@ -134,7 +143,7 @@ async fn clear_alert(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let client = Client::new();
 
-    let target_enc = format!("{}", target)
+    let target_enc = format!("{}", target);
     let update = format!("{}/rest/v1/stocks?name=eq.{}&targetprice=eq.{}", url, name, target_enc);
     let response = client
         .delete(&update)
@@ -191,7 +200,7 @@ pub async fn send_alert(name: &str, targetprice: f64, quote: f64) -> Result<(), 
     let client = Client::new();
     let access_token = env::var("PUSHAPIKEY").expect("Missing PUSHAPIKEY in .env");
 
-    let title = format!(" {} Hit target price ${:.2}", name, targetprice);
+    let title = format!(" {} Hit target alert price ${:.2}", name, targetprice);
     
     let body = format!("Current Price: ${:.2}", quote);
 
