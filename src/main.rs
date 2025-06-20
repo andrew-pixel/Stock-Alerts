@@ -133,7 +133,8 @@ async fn clear_alert(
     target: f64
 ) -> Result<(), Box<dyn std::error::Error>> {
     let client = Client::new();
-    let target_enc = encode(&target.to_string());
+
+    let target_enc = format!("{}", target)
     let update = format!("{}/rest/v1/stocks?name=eq.{}&targetprice=eq.{}", url, name, target_enc);
     let response = client
         .delete(&update)
@@ -190,7 +191,7 @@ pub async fn send_alert(name: &str, targetprice: f64, quote: f64) -> Result<(), 
     let client = Client::new();
     let access_token = env::var("PUSHAPIKEY").expect("Missing PUSHAPIKEY in .env");
 
-    let title = format!(" {} Hit target price ${:.2}", name, targetprice)
+    let title = format!(" {} Hit target price ${:.2}", name, targetprice);
     
     let body = format!("Current Price: ${:.2}", quote);
 
