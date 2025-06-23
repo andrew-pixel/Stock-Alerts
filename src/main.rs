@@ -152,7 +152,7 @@ async fn clear_alert(
     let client = Client::new();
 
     let target_enc = format!("{}", target);
-    let update = format!("{}/rest/v1/stocks?name=eq.{}&targetprice=eq.{}", url, name, target_enc);
+    let update = format!("{}/rest/v1/alerts?name=eq.{}&targetprice=eq.{}", url, name, target_enc);
     let response = client
         .delete(&update)
         .header("apikey", key)
