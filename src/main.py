@@ -1,58 +1,95 @@
 
-use dotenvy::dotenv;
-use reqwest::Client;
-use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
-use std::env;
+import requests
+import logging
+import boto3
+from dotenv import load_dotenv
+import os
+import yfinance as yf
+# Initialize the S3 client outside of the handler
+s3_client = boto3.client('s3')
 
-use lambda_runtime::{service_fn, Context, Error, LambdaEvent};
-use yahoo_finance_api as yahoo;
+# Initialize the logger
+logger = logging.getLogger()
+logger.setLevel("INFO")
+load_dotenv()
+url=os.environ.get("SUPABASE_URL")
+supaKey=os.environ.get("SUPABASEKEY")
+pushKey=os.environ.get("PUSH_KEY")
+
+def upload_receipt_to_s3(bucket_name, key, receipt_content):
+    """Helper function to upload receipt to S3"""
+    
+    try:
+        s3_client.put_object(
+            Bucket=bucket_name,
+            Key=key,
+            Body=receipt_content
+        )
+    except Exception as e:
+        logger.error(f"Failed to upload receipt to S3: {str(e)}")
+        raise
+
+def lambda_handler(event, context):
+    """
+    Main Lambda handler function
+    Parameters:
+        event: Dict containing the Lambda function event data
+        context: Lambda runtime context
+    Returns:
+        Dict containing status message
+    """
+    try:
+        # Parse the input event
+        order_id = event['Order_id']
+        amount = event['Amount']
+        item = event['Item']
+        
+        # Access environment variables
+        bucket_name = os.environ.get('RECEIPT_BUCKET')
+        if not bucket_name:
+            raise ValueError("Missing required environment variable RECEIPT_BUCKET")
+
+        # Create the receipt content and key destination
+        receipt_content = (
+            f"OrderID: {order_id}\n"
+            f"Amount: ${amount}\n"
+            f"Item: {item}"
+        )
+        key = f"receipts/{order_id}.txt"
+
+        # Upload the receipt to S3
+        upload_receipt_to_s3(bucket_name, key, receipt_content)
+
+        logger.info(f"Successfully processed order {order_id} and stored receipt in S3 bucket {bucket_name}")
+        
+        return {
+            "statusCode": 200,
+            "message": "Receipt processed successfully"
+        }
+
+    except Exception as e:
+        logger.error(f"Error processing order: {str(e)}")
+        raise
 
 
+def getStocks():
+    head= {"apikey": supaKey}
+    response = requests.get(url + "rest/v1/stocks", headers=head)
 
-#[derive(Serialize, Debug, Deserialize)]
-pub struct StockPrice {
-    pub name: String,
-    pub lastprice: f64,
-}
+    return response.json()
 
-#[derive(Serialize, Debug, Deserialize)]
-pub struct Alert {
-    pub name: String,
-    pub targetprice: f64,
-    pub direction: i8
-}
+def getAlerts():
+    head= {"apikey": supaKey}
+    response = requests.get(url + "rest/v1/alerts", headers=head)
 
-#[derive(Serialize)]
-struct Response {
-    req_id: String,
-    msg: String,
-}
-pub async fn getStocks(client: &Client, url: &str, key:&str) -> Result<Vec<StockPrice>, Box<dyn std::error::Error>> {
-    let response = client
-        .get(format!("{}/rest/v1/stocks", url))
-        .header("apikey", key)
-        .header("Authorization", format!("Bearer {}", key))
-        .header("Content-Type", "application/json")
-        .send()
-        .await?;
+    return response.json()
 
-    let text = response.text().await?;
-    Ok(serde_json::from_str(&text)?)
-}
-
-pub async fn getAlerts(client: &Client, url: &str, key:&str) -> Result<Vec<Alert>, Box<dyn std::error::Error>> {
-    let response = client
-        .get(format!("{}/rest/v1/alerts", url))
-        .header("apikey", key)
-        .header("Authorization", format!("Bearer {}", key))
-        .header("Content-Type", "application/json")
-        .send()
-        .await?;
-
-    let text = response.text().await?;
-    Ok(serde_json::from_str(&text)?)
-}
+def processStocks( stocks, alerts, eventType):
+    for stock in stocks:
+        print(stock.name, stock.lastprice)
+        ticker = yf.Ticker(stock.name)
+        price = ticker.history(period="1d")["Close"].iloc[-1]
+        print(price)
 
 pub async fn processStocksAndAlerts(stocks : Vec<StockPrice>, alerts: Vec<Alert>, eventType: &str, key : &str, url : &str
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -126,21 +163,7 @@ pub async fn function_handler(event: LambdaEvent<Value>) -> Result<(), Box<dyn s
     Ok(())
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Error> {
-    //tracing::init_default_subscriber();
 
-    let func = service_fn(function_handler);
-    lambda_runtime::run(func).await?;
-
-    //let event = serde_json::json!({ "test": "data" }); // Simulated event payload
-    //let ctx = lambda_runtime::Context::default(); // Dummy context
-
-    //let result = function_handler(event).await?;
-    //println!("Function Result: {}", result);
-
-    Ok(())
-}
 async fn clear_alert(
     url: &str,
     key: &str,
@@ -272,30 +295,4 @@ pub async fn send_pushbullet_notification(
 
     Ok(())
 }
-#[cfg(test)]
-pub mod test {
-    pub use super::*;
-}
-pub mod handlers {
-    pub use super::function_handler;
-    pub use super::send_pushbullet_notification;
-    pub use super::testable_function_handler;
-}
-pub async fn testable_function_handler(
-    event: LambdaEvent<Value>,
-    test_stocks: Vec<StockPrice>,
-    test_alerts: Vec<Alert>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    dotenv().ok();
-    let supabase_url = env::var("URL")?;
-    let supabase_key = env::var("APIKEY")?;
 
-    let event_type = event
-        .payload
-        .get("event_type")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
-
-    // run pure logic
-    processStocksAndAlerts(test_stocks, test_alerts, event_type,  &supabase_key,&supabase_url).await
-}
