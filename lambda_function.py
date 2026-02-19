@@ -35,7 +35,7 @@ def processStocks( stocks, alerts, eventType):
 
         ticker = yf.Ticker(stock["name"])
         price = ticker.history(period="1d")["Close"].iloc[-1]
-        priceDiff = ((price-stock["lastprice"]) / stock["lastprice"]).abs()
+        priceDiff = abs((price-stock["lastprice"]) / stock["lastprice"])
         positive = "+"
         if price < stock["lastprice"]:
             positive = "-"
@@ -47,7 +47,7 @@ def processStocks( stocks, alerts, eventType):
     for alr in alerts:
         ticker = yf.Ticker(alr["name"])
         price = ticker.history(period="1d")["Close"].iloc[-1]
-        priceDiff = ((price-alr["lastprice"]) / alr["lastprice"]).abs()
+        priceDiff = abs((price-alr["lastprice"]) / alr["lastprice"])
         if alr["direction"] == 1: 
             if price > alr["targetprice"]:
                 sendAlert(alr["name"], alr["targetprice"], price)
