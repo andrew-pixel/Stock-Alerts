@@ -24,7 +24,7 @@ jobs:
       
       - name: Zip Lambda
         run: |
-          zip -r lambda.zip . -x "*.git*" "*.github*" "*.venv*" "tests/*"
+          zip -r lambda.zip . -x "*.git*" "*.github*" "*.venv*" "tests/* "lambda.zip""
 
       - name: Deploy to AWS
         run: |
