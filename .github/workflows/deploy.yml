@@ -20,21 +20,17 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt -t package/
-
-      - name: Copy source code
-        run: |
-          cp lambda_function.py package/
+          pip install -r requirements.txt -t src/
 
       - name: Zip Lambda
         run: |
-          cd package
+          cd src
           zip -r ../lambda.zip .
 
       - name: Deploy to AWS
         run: |
           aws lambda update-function-code \
-            --function-name stockAlerts \
+            --function-name stockalerts \
             --zip-file fileb://lambda.zip
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
