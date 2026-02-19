@@ -47,7 +47,7 @@ def processStocks( stocks, alerts, eventType):
     for alr in alerts:
         ticker = yf.Ticker(alr["name"])
         price = ticker.history(period="1d")["Close"].iloc[-1]
-        priceDiff = abs((price-alr["lastprice"]) / alr["lastprice"])
+        priceDiff = abs((price-alr["targetprice"]) / alr["targetprice"])
         if alr["direction"] == 1: 
             if price > alr["targetprice"]:
                 sendAlert(alr["name"], alr["targetprice"], price)
