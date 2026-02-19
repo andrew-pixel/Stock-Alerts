@@ -9,7 +9,7 @@ url=os.environ.get("SUPABASE_URL")
 supaKey=os.environ.get("SUPABASEKEY")
 pushKey=os.environ.get("PUSH_KEY")
 
-def functionhandler(event, context):
+def lambda_handler(event, context):
     eventType = event.get("event_type")
     stocks = getStocks()
     alerts = getAlerts()
