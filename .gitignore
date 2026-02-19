@@ -1,4 +1,6 @@
 /target
-
+/tests
 note
 .env
+/tests
+tests/test.py
