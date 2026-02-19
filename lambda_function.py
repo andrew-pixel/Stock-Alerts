@@ -5,9 +5,9 @@ import os
 import yfinance as yf
 
 load_dotenv()
-url=os.environ.get("SUPABASE_URL")
-supaKey=os.environ.get("SUPABASEKEY")
-pushKey=os.environ.get("PUSH_KEY")
+url=os.environ.get("URL")
+supaKey=os.environ.get("APIKEY")
+pushKey=os.environ.get("PUSHAPIKEY")
 
 def lambda_handler(event, context):
     eventType = event.get("event_type")
