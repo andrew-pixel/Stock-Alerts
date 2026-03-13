@@ -4,3 +4,6 @@ note
 .env
 /tests
 tests/test.py
+tests/test.py
+extra.py
+crunch.py
