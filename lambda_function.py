@@ -45,7 +45,7 @@ def volatility(data, elapsed, currentPrice):
     timeFactor = 1.0-(elapsed/3600)
     
     volatility = timeFactor * rangePercent
-    volatility = max(volatility, 0.01)
+    volatility = max(volatility, 0.014)
     #sendDiscord("Current bounds set for "+ str(highEnd*(1+volatility/2)) + " " + str(lowEnd*(1-volatility/2)))
     return volatility
 
@@ -62,7 +62,7 @@ def processStocks( stocks, alerts, eventType):
         lastupdateobj = datetime.fromisoformat(stock["lastupdate"])
         lastupdate = lastupdateobj.timestamp()
         elapsed = timestampSeconds - lastupdate
-        percentCheck = 0.025
+        percentCheck = 0.035
         
         price = ticker["Close"].iloc[-1]
         priceDiff = abs((price-stock["lastprice"]) / stock["lastprice"])
