@@ -62,7 +62,7 @@ def processStocks( stocks, alerts, eventType):
         lastupdateobj = datetime.fromisoformat(stock["lastupdate"])
         lastupdate = lastupdateobj.timestamp()
         elapsed = timestampSeconds - lastupdate
-        percentCheck = 0.035
+        percentCheck = 0.025
         
         price = ticker["Close"].iloc[-1]
         priceDiff = abs((price-stock["lastprice"]) / stock["lastprice"])
@@ -73,7 +73,7 @@ def processStocks( stocks, alerts, eventType):
             percentCheck = volatility(ticker, elapsed, price) / 2 
             upper = price * (1 + percentCheck)
             lower = price * (1 - percentCheck)
-            sendDiscord(stock["name"] + " appears to be trading within a band " + str(lower) + "-" + str(upper))
+            sendDiscord(f"{stock['name']} appears to be trading within a band "f"{lower:.2f}-{upper:.2f}")
             
         elif elapsed > 1800.0:
             percentCheck = volatility(ticker, elapsed, stock["lastprice"]) / 2 
