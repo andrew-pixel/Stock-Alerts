@@ -68,7 +68,7 @@ def processStocks( stocks, alerts, eventType):
         priceDiff = abs((price-stock["lastprice"]) / stock["lastprice"])
         positive = "+"
         if elapsed > 1800.0:# remove 2000 check later. just to reduce message spam
-            percentCheck = volatility(data, elapsed, stock["lastprice"]) / 2 
+            percentCheck = volatility(ticker, elapsed, stock["lastprice"]) / 2 
             sendDiscord(stock["name"] + " appears to be trading within a band")
         if price < stock["lastprice"]:
             positive = "-"
