@@ -46,7 +46,7 @@ def volatility(data, elapsed, currentPrice):
     
     volatility = timeFactor * rangePercent
     volatility = max(volatility, 0.01)
-    sendDiscord("Current bounds set for "+ str(highEnd*(1+volatility/2)) + " " + str(lowEnd*(1-volatility/2)))
+    #sendDiscord("Current bounds set for "+ str(highEnd*(1+volatility/2)) + " " + str(lowEnd*(1-volatility/2)))
     return volatility
 
 def processStocks( stocks, alerts, eventType):
@@ -69,7 +69,12 @@ def processStocks( stocks, alerts, eventType):
         positive = "+"
         if elapsed > 1800.0:# remove 2000 check later. just to reduce message spam
             percentCheck = volatility(ticker, elapsed, stock["lastprice"]) / 2 
-            sendDiscord(stock["name"] + " appears to be trading within a band")
+            
+        if elapsed > 1800.0 and elapsed < 2000:
+            upper = stock["lastprice"] * (1 + percentCheck)
+            lower = stock["lastprice"] * (1 - percentCheck)
+            sendDiscord(stock["name"] + " appears to be trading within a band " + str(lower) + "-" + str(upper))
+            
         if price < stock["lastprice"]:
             positive = "-"
         if priceDiff > percentCheck:
