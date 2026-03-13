@@ -67,14 +67,16 @@ def processStocks( stocks, alerts, eventType):
         price = ticker["Close"].iloc[-1]
         priceDiff = abs((price-stock["lastprice"]) / stock["lastprice"])
         positive = "+"
-        if elapsed > 1800.0:# remove 2000 check later. just to reduce message spam
-            percentCheck = volatility(ticker, elapsed, stock["lastprice"]) / 2 
-            
-        if elapsed > 1800.0 and elapsed < 2000:
-            upper = stock["lastprice"] * (1 + percentCheck)
-            lower = stock["lastprice"] * (1 - percentCheck)
+
+        if elapsed > 1800.0 and not stock["band"]:
+            updateDatabase(stock["name"], price, now.isoformat(), True)
+            percentCheck = volatility(ticker, elapsed, price) / 2 
+            upper = price * (1 + percentCheck)
+            lower = price * (1 - percentCheck)
             sendDiscord(stock["name"] + " appears to be trading within a band " + str(lower) + "-" + str(upper))
             
+        elif elapsed > 1800.0:
+            percentCheck = volatility(ticker, elapsed, stock["lastprice"]) / 2 
         if price < stock["lastprice"]:
             positive = "-"
         if priceDiff > percentCheck:
@@ -106,11 +108,11 @@ def clearAlert(name, target):
     response = requests.delete(update_url, headers=headers)
 
 
-def updateDatabase(name, price, timestamp):
+def updateDatabase(name, price, timestamp, band=False):
     headers = {"apikey": supaKey ,  "Authorization": f"Bearer {supaKey}"}
     update_url = f"{url}/rest/v1/stocks?name=eq.{name}"
     priceR = round(price, 2)
-    payload = {"lastprice": priceR, "lastupdate": timestamp}
+    payload = {"lastprice": priceR, "lastupdate": timestamp, "band": band}
 
 
     res = requests.patch(update_url, headers=headers, json=payload)
